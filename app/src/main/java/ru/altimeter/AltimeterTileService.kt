@@ -1,5 +1,7 @@
 package ru.altimeter
 
+import androidx.wear.protolayout.DimensionBuilders.expand
+import androidx.wear.protolayout.LayoutElementBuilders.Column
 import androidx.wear.protolayout.TimelineBuilders
 import androidx.wear.protolayout.material3.MaterialScope
 import androidx.wear.protolayout.material3.Typography
@@ -13,33 +15,37 @@ import java.util.Locale
 
 class AltimeterTileService : Material3TileService() {
     override suspend fun MaterialScope.tileResponse(requestParams: TileRequest): Tile {
-        // A short, one-shot sensor read only while the system requests this tile.
+        // One short sensor read while the system requests this tile; no persistent polling.
         val pressure = AltimeterData.readPressure(this@AltimeterTileService, 1700L)
-        val reading = pressure?.let {
-            AltimeterData.getReading(this@AltimeterTileService, it)
-        }
+        val reading = pressure?.let { AltimeterData.getReading(this@AltimeterTileService, it) }
 
-        val layout = primaryLayout(mainSlot = {
-            if (reading == null) {
-                text(
-                    (if (pressure == null) "Барометр недоступен" else "Открой Altimeter для калибровки").layoutString,
-                    typography = Typography.BODY_MEDIUM
-                )
-            } else {
-                text(
-                    String.format(Locale.getDefault(), "%.1f м", reading.altitudeM).layoutString,
-                    typography = Typography.TITLE_LARGE
-                )
-                text(
-                    String.format(Locale.getDefault(), "Ground %.1f hPa", reading.groundHpa).layoutString,
-                    typography = Typography.BODY_MEDIUM
-                )
-                text(
-                    String.format(Locale.getDefault(), "MSL %.1f hPa", reading.seaLevelHpa).layoutString,
-                    typography = Typography.BODY_MEDIUM
-                )
+        val content = Column.Builder()
+            .setWidth(expand())
+            .setHeight(expand())
+            .apply {
+                if (reading == null) {
+                    addContent(text(
+                        (if (pressure == null) "Барометр недоступен" else "Открой Altimeter для калибровки").layoutString,
+                        typography = Typography.BODY_MEDIUM
+                    ))
+                } else {
+                    addContent(text(
+                        String.format(Locale.getDefault(), "%.1f м", reading.altitudeM).layoutString,
+                        typography = Typography.TITLE_LARGE
+                    ))
+                    addContent(text(
+                        String.format(Locale.getDefault(), "Ground %.1f hPa", reading.groundHpa).layoutString,
+                        typography = Typography.BODY_MEDIUM
+                    ))
+                    addContent(text(
+                        String.format(Locale.getDefault(), "MSL %.1f hPa", reading.seaLevelHpa).layoutString,
+                        typography = Typography.BODY_MEDIUM
+                    ))
+                }
             }
-        })
+            .build()
+
+        val layout = primaryLayout(mainSlot = { content })
         return Tile.Builder()
             .setResourcesVersion("1")
             .setTileTimeline(TimelineBuilders.Timeline.fromLayoutElement(layout))
