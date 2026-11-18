@@ -1,0 +1,63 @@
+package ru.altimeter
+
+import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.resume
+import kotlin.math.pow
+
+data class Reading(val groundHpa: Float, val altitudeM: Double, val seaLevelHpa: Double)
+
+object AltimeterData {
+    private const val PREFS = "altimeter_settings"
+    private const val KEY_BASE_PRESSURE = "base_pressure_hpa"
+    private const val KEY_BASE_ALTITUDE = "base_altitude_m"
+
+    fun hasCalibration(context: Context): Boolean {
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        return p.contains(KEY_BASE_PRESSURE) && p.contains(KEY_BASE_ALTITUDE)
+    }
+
+    fun calibrate(context: Context, pressureHpa: Float, knownAltitudeM: Double) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putFloat(KEY_BASE_PRESSURE, pressureHpa)
+            .putString(KEY_BASE_ALTITUDE, knownAltitudeM.toString()).apply()
+    }
+
+    fun getReading(context: Context, pressureHpa: Float): Reading? {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (!hasCalibration(context)) return null
+        val basePressure = prefs.getFloat(KEY_BASE_PRESSURE, 0f).toDouble()
+        val baseAltitude = prefs.getString(KEY_BASE_ALTITUDE, "0")?.toDoubleOrNull() ?: return null
+        if (basePressure <= 0.0 || pressureHpa <= 0f) return null
+        val altitude = baseAltitude + 44330.0 * (1.0 - (pressureHpa / basePressure).pow(0.190294957))
+        val factor = 1.0 - altitude / 44330.0
+        val seaLevel = if (factor > 0.0) pressureHpa / factor.pow(5.255) else Double.NaN
+        return Reading(pressureHpa, altitude, seaLevel)
+    }
+
+    suspend fun readPressure(context: Context, timeoutMs: Long = 1800L): Float? {
+        val manager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val sensor = manager.getDefaultSensor(Sensor.TYPE_PRESSURE) ?: return null
+        return withTimeoutOrNull(timeoutMs) {
+            suspendCancellableCoroutine { continuation ->
+                val listener = object : SensorEventListener {
+                    override fun onSensorChanged(event: SensorEvent) {
+                        val value = event.values.firstOrNull()
+                        if (value != null && value > 0f && continuation.isActive) {
+                            manager.unregisterListener(this)
+                            continuation.resume(value)
+                        }
+                    }
+                    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+                }
+                continuation.invokeOnCancellation { manager.unregisterListener(listener) }
+                manager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+            }
+        }
+    }
+}
