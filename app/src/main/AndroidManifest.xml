@@ -11,7 +11,7 @@
             </intent-filter>
         </activity>
         <service android:name=".AltimeterTileService" android:label="Altimeter"
-            android:description="Текущая высота и атмосферное давление"
+            android:description="@string/tile_description"
             android:exported="true"
             android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
             <intent-filter>
