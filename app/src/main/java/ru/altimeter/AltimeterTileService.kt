@@ -1,7 +1,7 @@
 package ru.altimeter
 
+import androidx.wear.protolayout.DimensionBuilders.dp
 import androidx.wear.protolayout.DimensionBuilders.expand
-import androidx.wear.protolayout.DimensionBuilders.weight
 import androidx.wear.protolayout.LayoutElementBuilders.Column
 import androidx.wear.protolayout.LayoutElementBuilders.Row
 import androidx.wear.protolayout.TimelineBuilders
@@ -46,43 +46,46 @@ class AltimeterTileService : Material3TileService() {
                 } else {
                     addContent(text(
                         String.format(Locale.getDefault(), "%.1f м", reading.altitudeM).layoutString,
-                        typography = Typography.TITLE_LARGE
+                        typography = Typography.DISPLAY_SMALL
                     ))
                     addContent(text(
                         String.format(Locale.getDefault(), "Ground %.1f hPa", reading.groundHpa).layoutString,
-                        typography = Typography.BODY_MEDIUM
+                        typography = Typography.BODY_LARGE
                     ))
                     addContent(text(
                         String.format(Locale.getDefault(), "MSL %.1f hPa", reading.seaLevelHpa).layoutString,
-                        typography = Typography.BODY_MEDIUM
+                        typography = Typography.BODY_LARGE
                     ))
                     addContent(
                         Row.Builder()
                             .setWidth(expand())
                             .addContent(textButton(
                                 onClick = clickable(id = "down", action = loadAction()),
-                                width = weight(1f),
+                                width = dp(48f),
+                                height = dp(48f),
                                 labelContent = { text("▼".layoutString) }
                             ))
                             .addContent(textButton(
                                 onClick = clickable(id = "up", action = loadAction()),
-                                width = weight(1f),
+                                width = dp(48f),
+                                height = dp(48f),
                                 labelContent = { text("▲".layoutString) }
+                            ))
+                            .addContent(textButton(
+                                onClick = clickable(id = "refresh", action = loadAction()),
+                                width = dp(48f),
+                                height = dp(48f),
+                                labelContent = { text("↻".layoutString) }
                             ))
                             .build()
                     )
-                    addContent(textButton(
-                        onClick = clickable(id = "refresh", action = loadAction()),
-                        width = expand(),
-                        labelContent = { text("Обновить".layoutString) }
-                    ))
                 }
             }
             .build()
 
         val layout = primaryLayout(mainSlot = { content })
         return Tile.Builder()
-            .setResourcesVersion("2")
+            .setResourcesVersion("3")
             .setTileTimeline(TimelineBuilders.Timeline.fromLayoutElement(layout))
             .build()
     }
