@@ -50,7 +50,6 @@ class MainActivity : Activity() {
             imeOptions = EditorInfo.IME_ACTION_DONE
             textSize = 40f
             gravity = Gravity.CENTER
-            singleLine = true
             setPadding(0, 0, 0, 0)
             setOnEditorActionListener { _, actionId, event ->
                 if (actionId == EditorInfo.IME_ACTION_DONE ||
