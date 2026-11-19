@@ -11,6 +11,7 @@ import android.widget.TextView
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import androidx.wear.tiles.TileService
 import java.util.Locale
 
 class MainActivity : Activity() {
@@ -74,6 +75,7 @@ class MainActivity : Activity() {
                     } else {
                         lastPressure = p
                         AltimeterData.calibrate(this@MainActivity, p, value)
+                        TileService.getUpdater(this@MainActivity).requestUpdate(AltimeterTileService::class.java)
                         render(p)
                         status.text = String.format(
                             Locale.getDefault(),
@@ -116,6 +118,7 @@ class MainActivity : Activity() {
         }
         val old = AltimeterData.getReading(this, p)?.altitudeM ?: 0.0
         AltimeterData.calibrate(this, p, old + delta)
+        TileService.getUpdater(this).requestUpdate(AltimeterTileService::class.java)
         status.text = "Калибровка скорректирована"
         render(p)
     }
