@@ -46,7 +46,7 @@ class MainActivity : Activity() {
         pressure = label("Ground: — hPa", 15f)
         seaLevel = label("MSL: — hPa", 15f)
         altitudeInput = EditText(this).apply {
-            hint = "Известная высота, м"
+            hint = "Текущая высота, м"
             inputType = 8194
             textSize = 18f
             gravity = Gravity.CENTER
@@ -145,6 +145,11 @@ class MainActivity : Activity() {
     private fun render(p: Float) {
         val r = AltimeterData.getReading(this, p) ?: return
         height.text = String.format(Locale.getDefault(), "%.1f м", r.altitudeM)
+        val displayedAltitude = String.format(Locale.US, "%.1f", r.altitudeM)
+        if (altitudeInput.text.toString() != displayedAltitude) {
+            altitudeInput.setText(displayedAltitude)
+            altitudeInput.setSelection(altitudeInput.text.length)
+        }
         pressure.text = String.format(Locale.getDefault(), "Ground: %.1f hPa", r.groundHpa)
         seaLevel.text = String.format(Locale.getDefault(), "MSL: %.1f hPa", r.seaLevelHpa)
     }
