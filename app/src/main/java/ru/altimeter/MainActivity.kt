@@ -49,7 +49,6 @@ class MainActivity : Activity() {
             inputType = 8194
             textSize = 18f
             gravity = Gravity.CENTER
-            singleLine = true
         }
 
         val row = LinearLayout(this).apply {
