@@ -35,7 +35,9 @@ class MainActivity : Activity() {
             setPadding(22, 18, 22, 18)
         }
         fun label(value: String, size: Float) = TextView(this).apply {
-            text = value; textSize = size; gravity = Gravity.CENTER
+            text = value
+            textSize = size
+            gravity = Gravity.CENTER
             setPadding(0, 5, 0, 5)
         }
         status = label("Получение данных барометра…", 13f)
@@ -43,23 +45,47 @@ class MainActivity : Activity() {
         pressure = label("Ground: — hPa", 15f)
         seaLevel = label("MSL: — hPa", 15f)
         altitudeInput = EditText(this).apply {
-            hint = "Известная высота, м"; inputType = 8194
-            textSize = 16f; gravity = Gravity.CENTER
+            hint = "Известная высота, м"
+            inputType = 8194
+            textSize = 18f
+            gravity = Gravity.CENTER
+            singleLine = true
         }
-        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
-        row.addView(button("−1 м") { adjust(-1.0) }, LinearLayout.LayoutParams(0, 52, 1f))
-        row.addView(button("+1 м") { adjust(1.0) }, LinearLayout.LayoutParams(0, 52, 1f))
-        val calibrate = button("Установить высоту") {
-            val value = altitudeInput.text.toString().replace(',', '.').toDoubleOrNull()
-            val p = lastPressure
-            if (value == null) status.text = "Введи высоту числом"
-            else if (p == null) status.text = "Нет данных барометра. Обнови показания."
-            else {
-                AltimeterData.calibrate(this, p, value)
-                status.text = "Калибровка сохранена"
-                render(p)
+
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        row.addView(button("▼", 22f) { adjust(-1.0) }, LinearLayout.LayoutParams(0, 52, 1f))
+        row.addView(button("▲", 22f) { adjust(1.0) }, LinearLayout.LayoutParams(0, 52, 1f))
+
+        val calibrate = button("Установить высоту", 13f) {
+            val value = altitudeInput.text.toString()
+                .trim()
+                .replace(',', '.')
+                .toDoubleOrNull()
+            if (value == null) {
+                status.text = "Введи известную высоту числом"
+            } else {
+                status.text = "Считываю давление для калибровки…"
+                scope.launch {
+                    val p = AltimeterData.readPressure(this@MainActivity)
+                    if (p == null) {
+                        status.text = "Барометр не ответил. Повтори калибровку."
+                    } else {
+                        lastPressure = p
+                        AltimeterData.calibrate(this@MainActivity, p, value)
+                        render(p)
+                        status.text = String.format(
+                            Locale.getDefault(),
+                            "Новая исходная высота: %.1f м",
+                            value
+                        )
+                    }
+                }
             }
         }
+
         root.addView(status, match())
         root.addView(height, match())
         root.addView(pressure, match())
@@ -67,21 +93,28 @@ class MainActivity : Activity() {
         root.addView(row, match())
         root.addView(altitudeInput, match())
         root.addView(calibrate, match())
-        root.addView(button("Обновить") { refresh() }, match())
+        root.addView(button("Обновить", 13f) { refresh() }, match())
         setContentView(root)
     }
 
-    private fun button(caption: String, action: () -> Unit) = Button(this).apply {
-        text = caption; textSize = 13f; setOnClickListener { action() }
-    }
+    private fun button(caption: String, size: Float = 13f, action: () -> Unit) =
+        Button(this).apply {
+            text = caption
+            textSize = size
+            setOnClickListener { action() }
+        }
 
     private fun match() = LinearLayout.LayoutParams(
-        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        ViewGroup.LayoutParams.MATCH_PARENT,
+        ViewGroup.LayoutParams.WRAP_CONTENT
     )
 
     private fun adjust(delta: Double) {
         val p = lastPressure
-        if (p == null) { status.text = "Сначала получи показания барометра"; return }
+        if (p == null) {
+            status.text = "Сначала обнови показания барометра"
+            return
+        }
         val old = AltimeterData.getReading(this, p)?.altitudeM ?: 0.0
         AltimeterData.calibrate(this, p, old + delta)
         status.text = "Калибровка скорректирована"
@@ -92,12 +125,17 @@ class MainActivity : Activity() {
         status.text = "Считываю барометр…"
         scope.launch {
             val p = AltimeterData.readPressure(this@MainActivity)
-            if (p == null) { status.text = "Барометр недоступен или не ответил"; return@launch }
+            if (p == null) {
+                status.text = "Барометр недоступен или не ответил"
+                return@launch
+            }
             lastPressure = p
             if (!AltimeterData.hasCalibration(this@MainActivity)) {
                 AltimeterData.calibrate(this@MainActivity, p, 0.0)
                 status.text = "Начальная точка 0 м. Укажи известную высоту."
-            } else status.text = "Показания обновлены"
+            } else {
+                status.text = "Показания обновлены"
+            }
             render(p)
         }
     }
@@ -109,5 +147,8 @@ class MainActivity : Activity() {
         seaLevel.text = String.format(Locale.getDefault(), "MSL: %.1f hPa", r.seaLevelHpa)
     }
 
-    override fun onDestroy() { scope.cancel(); super.onDestroy() }
+    override fun onDestroy() {
+        scope.cancel()
+        super.onDestroy()
+    }
 }
