@@ -42,7 +42,8 @@ object AltimeterData {
     fun getReading(context: Context, pressureHpa: Double): Reading? {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         if (!hasCalibration(context)) return null
-        val basePressure = prefs.getString(KEY_BASE_PRESSURE, null)?.toDoubleOrNull()\n            ?: prefs.getFloat(KEY_BASE_PRESSURE, 0f).toDouble()
+        val basePressure = prefs.getString(KEY_BASE_PRESSURE, null)?.toDoubleOrNull()
+            ?: prefs.getFloat(KEY_BASE_PRESSURE, 0f).toDouble()
         val baseAltitude = prefs.getString(KEY_BASE_ALTITUDE, "0")?.toDoubleOrNull() ?: return null
         if (basePressure <= 0.0 || pressureHpa <= 0.0) return null
         val altitude = baseAltitude + ISA_HEIGHT_SCALE * (1.0 - (pressureHpa / basePressure).pow(1.0 / ISA_EXPONENT))
