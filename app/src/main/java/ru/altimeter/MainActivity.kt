@@ -22,7 +22,7 @@ class MainActivity : Activity() {
     private lateinit var pressure: TextView
     private lateinit var seaLevel: TextView
     private lateinit var altitudeInput: EditText
-    private var lastPressure: Float? = null
+    private var lastPressure: Double? = null
     private var updatingField = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -159,7 +159,7 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun render(p: Float) {
+    private fun render(p: Double) {
         val r = AltimeterData.getReading(this, p) ?: return
         val displayedAltitude = String.format(Locale.US, "%.1f", r.altitudeM)
         if (altitudeInput.text.toString() != displayedAltitude) {
