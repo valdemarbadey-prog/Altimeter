@@ -23,11 +23,9 @@ class AltimeterTileService : Material3TileService() {
         val clickId = requestParams.currentState.lastClickableId
         val pressure = AltimeterData.readPressure(this@AltimeterTileService, 1700L)
 
-        if (pressure != null && (clickId == "up" || clickId == "down")) {
-            val current = AltimeterData.getReading(this@AltimeterTileService, pressure)
-            val currentAltitude = current?.altitudeM ?: 0.0
+        if (clickId == "up" || clickId == "down") {
             val delta = if (clickId == "up") 1.0 else -1.0
-            AltimeterData.calibrate(this@AltimeterTileService, pressure, currentAltitude + delta)
+            AltimeterData.adjustCalibration(this@AltimeterTileService, delta)
         }
 
         val reading = pressure?.let {
