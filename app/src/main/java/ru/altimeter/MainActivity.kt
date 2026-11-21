@@ -120,10 +120,9 @@ class MainActivity : Activity() {
     }
 
     private fun adjust(delta: Double) {
-        val base = typedAltitude()
-            ?: AltimeterData.getReading(this, lastPressure ?: return)?.altitudeM
-            ?: 0.0
-        setCalibration(base + delta, "Калибровка изменена")
+        AltimeterData.adjustCalibration(this, delta)
+        TileService.getUpdater(this).requestUpdate(AltimeterTileService::class.java)
+        refresh()
     }
 
     private fun setCalibration(value: Double, successMessage: String) {
