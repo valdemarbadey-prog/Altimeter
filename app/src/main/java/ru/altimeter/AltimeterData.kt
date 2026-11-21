@@ -16,6 +16,10 @@ object AltimeterData {
     private const val PREFS = "altimeter_settings"
     private const val KEY_BASE_PRESSURE = "base_pressure_hpa"
     private const val KEY_BASE_ALTITUDE = "base_altitude_m"
+    private const val ISA_LAPSE_RATE = 0.0065
+    private const val ISA_SEA_LEVEL_TEMPERATURE = 288.15
+    private const val ISA_EXPONENT = 5.25588
+    private const val ISA_HEIGHT_SCALE = ISA_SEA_LEVEL_TEMPERATURE / ISA_LAPSE_RATE
 
     fun hasCalibration(context: Context): Boolean {
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -28,15 +32,22 @@ object AltimeterData {
             .putString(KEY_BASE_ALTITUDE, knownAltitudeM.toString()).apply()
     }
 
+    fun adjustCalibration(context: Context, deltaM: Double) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (!hasCalibration(context)) return
+        val current = prefs.getString(KEY_BASE_ALTITUDE, "0")?.toDoubleOrNull() ?: return
+        prefs.edit().putString(KEY_BASE_ALTITUDE, (current + deltaM).toString()).apply()
+    }
+
     fun getReading(context: Context, pressureHpa: Float): Reading? {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         if (!hasCalibration(context)) return null
         val basePressure = prefs.getFloat(KEY_BASE_PRESSURE, 0f).toDouble()
         val baseAltitude = prefs.getString(KEY_BASE_ALTITUDE, "0")?.toDoubleOrNull() ?: return null
         if (basePressure <= 0.0 || pressureHpa <= 0f) return null
-        val altitude = baseAltitude + 44330.0 * (1.0 - (pressureHpa / basePressure).pow(0.190294957))
-        val factor = 1.0 - altitude / 44330.0
-        val seaLevel = if (factor > 0.0) pressureHpa / factor.pow(5.255) else Double.NaN
+        val altitude = baseAltitude + ISA_HEIGHT_SCALE * (1.0 - (pressureHpa / basePressure).pow(1.0 / ISA_EXPONENT))
+        val factor = 1.0 - (ISA_LAPSE_RATE * altitude / ISA_SEA_LEVEL_TEMPERATURE)
+        val seaLevel = if (factor > 0.0) pressureHpa / factor.pow(ISA_EXPONENT) else Double.NaN
         return Reading(pressureHpa, altitude, seaLevel)
     }
 
